@@ -64,7 +64,7 @@ tasks:
     type: io.kestra.plugin.core.flow.Pause
     onResume:
       - id: aprobar
-        type: BOOLEAN
+        type: BOOL
         description: "¿Promover el challenger a champion?"
         defaults: false
       - id: comentario
@@ -85,6 +85,7 @@ tasks:
       API_URL: http://api:8000
       ADMIN_TOKEN: "{{ secret('ADMIN_TOKEN') }}"
       COMENTARIO: "{{ outputs.aprobacion.onResume.comentario }}"
+      APROBADOR: "{{ outputs.aprobacion.resumed.by ?? 'kestra-ui' }}"
       SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
       SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
       SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
@@ -92,7 +93,7 @@ tasks:
       SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
       SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
     commands:
-      - python -m src.reentrenar decidir --lote {{ inputs.lote }} --version {{ outputs.entrenar.vars.version }} --aprobar {{ outputs.aprobacion.onResume.aprobar }} --comentario "$COMENTARIO" --por kestra-ui
+      - python -m src.reentrenar decidir --lote {{ inputs.lote }} --version {{ outputs.entrenar.vars.version }} --aprobar {{ outputs.aprobacion.onResume.aprobar }} --comentario "$COMENTARIO" --por "$APROBADOR"
 
   - id: resultado
     type: io.kestra.plugin.core.log.Log

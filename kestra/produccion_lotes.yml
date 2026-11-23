@@ -26,7 +26,7 @@ inputs:
     defaults: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     description: Lotes (meses simulados) a procesar, en orden
   - id: cierre
-    type: BOOLEAN
+    type: BOOL
     defaults: true
     description: Al terminar, unir y monitorear el target del último lote
 
