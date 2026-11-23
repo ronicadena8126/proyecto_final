@@ -1,0 +1,7 @@
+Hallazgo,Evidencia,Consecuencia en el modelo
+H1. Clases desbalanceadas,"22.1% de impagos (razón 3.5:1); ""siempre paga"" tendría 77.9% de accuracy","CV estratificada; AUC-ROC y AP en vez de accuracy; umbral elegido por costo, no 0,5"
+H2. Montos con cola larga y atípicos legítimos,"pay_amt_m1: 9.04% atípicos IQR, asimetría 15.31; los atípicos tienen menos impago (12.3%)",No eliminarlos (son clientes reales e informativos); log con signo en los montos para modelos lineales y redes
+H3. El atraso reciente domina la señal,"Spearman: pay_status_m1 = 0.30, max_delay_6m = 0.38; impago 50% si el atraso fue en sep vs 12% sin atrasos",Feature de recencia meses_desde_ultimo_atraso; la regla de negocio (atraso en sep) es una baseline fuerte que hay que superar
+H4. Relación no monótona en estados −2/−1/0,"impago 12.7% (−2), 16.6% (−1), 12.8% (0): «pago total» (−1) es más riesgoso que «pago mínimo» (0); el orden numérico no refleja el riesgo",estado_ultimo_mes como categórica con one-hot (no como número)
+H5. Colinealidad entre saldos mensuales,Spearman mínima entre bill_amt_m1..m6 = 0.73,Regularización L2 en el lineal; se agregan tendencias (tendencia_utilizacion) en vez de más niveles
+H6. Columna vacía desde la OBT,avg_payment_ratio_6m: 100% nula en Snowflake (en el pipeline local del PSet 2 tenía datos: se perdió al escribir la OBT),Se excluye de las features (src/datos.columnas_vacias); se reporta como defecto a corregir en el PSet 2

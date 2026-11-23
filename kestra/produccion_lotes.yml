@@ -1,0 +1,152 @@
+id: produccion_lotes
+namespace: usfq.proyecto_final
+description: |
+  Simulación de producción (sección 5). Patrón BATCH: el día 1 de cada mes se puntúa la cartera del
+  mes y cobranza recibe la lista priorizada. Por cada lote (un mes simulado):
+    1. puntuar  - lee el lote de Snowflake (PRODUCCION.LOTES) y llama a la API cliente por cliente
+                  (validación, decisión y registro con la versión del modelo que la produjo);
+    2. volcar   - carga en Snowflake lo que la API registró (PREDICCIONES y SOLICITUDES);
+    3. unir     - une los targets que YA llegaron (horizonte de 1 mes: el target del lote k llega con
+                  el lote k+1) con sus predicciones -> PRODUCCION.DESEMPENO;
+    4. monitoreo (subflujo) - métricas, alertas y, si corresponde, reentrenamiento con aprobación.
+  Los lotes se procesan en orden y de uno en uno (concurrencyLimit: 1): si el monitoreo dispara un
+  reentrenamiento, el lote siguiente espera la decisión humana y se puntúa con el champion vigente.
+  Al final, "cierre" deja llegar el target del último lote y lo monitorea.
+labels:
+  project: anticipar-mora
+  layer: produccion
+concurrency:
+  limit: 1
+  behavior: QUEUE
+
+inputs:
+  - id: lotes
+    type: ARRAY
+    itemType: INT
+    defaults: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    description: Lotes (meses simulados) a procesar, en orden
+  - id: cierre
+    type: BOOLEAN
+    defaults: true
+    description: Al terminar, unir y monitorear el target del último lote
+
+
+tasks:
+  - id: por_lote
+    type: io.kestra.plugin.core.flow.Loop
+    values: "{{ inputs.lotes }}"
+    concurrencyLimit: 1
+    tasks:
+      - id: puntuar
+        type: io.kestra.plugin.scripts.shell.Commands
+        containerImage: proyecto-final-jobs:1.0
+        taskRunner:
+          type: io.kestra.plugin.scripts.runner.docker.Docker
+          pullPolicy: NEVER
+          networkMode: proyecto_final_net
+        env:
+          ALMACEN: snowflake
+          API_URL: http://api:8000
+          ADMIN_TOKEN: "{{ secret('ADMIN_TOKEN') }}"
+          MLFLOW_TRACKING_URI: http://mlflow:5000
+          SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+          SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+          SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+          SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+          SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+          SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+        commands:
+          - python -m src.produccion puntuar --lote {{ item.value }}
+        timeout: PT20M
+        retry:
+          type: constant
+          interval: PT30S
+          maxAttempts: 3
+
+      - id: volcar
+        type: io.kestra.plugin.scripts.shell.Commands
+        containerImage: proyecto-final-jobs:1.0
+        taskRunner:
+          type: io.kestra.plugin.scripts.runner.docker.Docker
+          pullPolicy: NEVER
+          networkMode: proyecto_final_net
+        env:
+          ALMACEN: snowflake
+          API_URL: http://api:8000
+          ADMIN_TOKEN: "{{ secret('ADMIN_TOKEN') }}"
+          SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+          SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+          SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+          SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+          SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+          SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+        commands:
+          - python -m src.produccion volcar
+        retry:
+          type: exponential
+          interval: PT30S
+          maxInterval: PT5M
+          maxAttempts: 4
+
+      - id: unir
+        type: io.kestra.plugin.scripts.shell.Commands
+        containerImage: proyecto-final-jobs:1.0
+        taskRunner:
+          type: io.kestra.plugin.scripts.runner.docker.Docker
+          pullPolicy: NEVER
+          networkMode: proyecto_final_net
+        env:
+          ALMACEN: snowflake
+          SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+          SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+          SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+          SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+          SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+          SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+        commands:
+          - python -m src.produccion unir --lote {{ item.value }}
+
+      - id: monitoreo
+        type: io.kestra.plugin.core.flow.Subflow
+        namespace: usfq.proyecto_final
+        flowId: monitoreo
+        wait: true
+        transmitFailed: true
+        inputs:
+          lote: "{{ item.value }}"
+
+  - id: cierre
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ inputs.cierre }}"
+    then:
+      - id: unir_cierre
+        type: io.kestra.plugin.scripts.shell.Commands
+        containerImage: proyecto-final-jobs:1.0
+        taskRunner:
+          type: io.kestra.plugin.scripts.runner.docker.Docker
+          pullPolicy: NEVER
+          networkMode: proyecto_final_net
+        env:
+          ALMACEN: snowflake
+          SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+          SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+          SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+          SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+          SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+          SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+        commands:
+          - python -m src.produccion unir --lote {{ (inputs.lotes | last) + 1 }}
+      - id: monitoreo_cierre
+        type: io.kestra.plugin.core.flow.Subflow
+        namespace: usfq.proyecto_final
+        flowId: monitoreo
+        wait: true
+        transmitFailed: true
+        inputs:
+          lote: "{{ (inputs.lotes | last) + 1 }}"
+
+errors:
+  - id: log_falla
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: "FALLÓ la simulación de producción (execution {{ execution.id }}). Revisar la tarea fallida; los pasos son idempotentes y el lote se puede reprocesar."

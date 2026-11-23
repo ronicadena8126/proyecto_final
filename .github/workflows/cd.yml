@@ -1,0 +1,61 @@
+# Despliegue continuo del CÓDIGO: en cada merge a main con las pruebas de ci.yml en verde, construye
+# la imagen de la API y la publica en GitHub Container Registry con el hash del commit como tag
+# (y "latest"). docker-compose.yml usa esa imagen (API_TAG en .env).
+#
+# El MODELO no se despliega aquí: vive en el Model Registry de MLflow y cambia solo cuando una persona
+# aprueba la promoción en kestra/reentrenamiento.yml (la API lo toma por alias sin reconstruirse).
+name: cd
+
+on:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publicar:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Nombre de la imagen
+        id: img
+        run: |
+          echo "nombre=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/proyecto_final-api" >> "$GITHUB_OUTPUT"
+          echo "sha=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-qemu-action@v3        # imagen también para Mac con chip Apple (arm64)
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construir y publicar
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: api/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ${{ steps.img.outputs.nombre }}:${{ steps.img.outputs.sha }}
+            ${{ steps.img.outputs.nombre }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.event.workflow_run.head_sha }}
+
+      - name: Resumen
+        run: |
+          echo "Publicada ${{ steps.img.outputs.nombre }}:${{ steps.img.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "En .env: API_TAG=${{ steps.img.outputs.sha }}  y luego  docker compose pull api && docker compose up -d api" >> "$GITHUB_STEP_SUMMARY"

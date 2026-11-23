@@ -1,0 +1,52 @@
+# Integración continua: en cada push y en cada pull request.
+#   1. instala dependencias de la API y de las pruebas
+#   2. corre pytest (contrato, modelo, comportamiento, respaldo) con la copia del champion de
+#      tests/fixtures/ (en CI no hay servidor de MLflow)
+#   3. construye la imagen de la API y verifica que arranca y responde con ese mismo modelo
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: api/requirements.txt
+
+      - name: Instalar dependencias
+        run: |
+          sudo apt-get update && sudo apt-get install -y libgomp1
+          pip install -r api/requirements.txt pytest==8.3.3
+
+      - name: Pruebas (pytest)
+        run: pytest -v
+
+      - name: Construir la imagen de la API
+        run: docker build -f api/Dockerfile -t proyecto_final-api:ci .
+
+      - name: Prueba de humo del contenedor
+        run: |
+          docker run -d --name api -p 8000:8000 \
+            -e MODELO_URI=/app/fixtures/modelo -e ADMIN_TOKEN=ci \
+            -v "$PWD/tests/fixtures:/app/fixtures:ro" proyecto_final-api:ci
+          for i in $(seq 1 30); do curl -fs localhost:8000/salud && break; sleep 2; done
+          curl -fs localhost:8000/salud | grep '"modelo_cargado":true'
+          python - <<'PY'
+          import json, urllib.request
+          from api.esquemas import Cliente
+          ej = json.dumps(Cliente.model_config["json_schema_extra"]["example"]).encode()
+          r = urllib.request.urlopen(urllib.request.Request("http://localhost:8000/predecir", ej, {"Content-Type": "application/json"}))
+          j = json.load(r); print(j); assert j["fuente"] == "modelo" and j["decision"] in ("contactar", "no_contactar")
+          PY
+
+      - name: Logs del contenedor
+        if: always()
+        run: docker logs api || true

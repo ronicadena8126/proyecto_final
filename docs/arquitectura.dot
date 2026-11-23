@@ -1,0 +1,35 @@
+digraph G {
+  rankdir=TB; fontname="Helvetica"; nodesep=0.3; ranksep=0.5; newrank=true; splines=true;
+  node [fontname="Helvetica", fontsize=11, shape=box, style="rounded,filled", fillcolor="#ffffff", color="#5b6b7b"];
+  edge [fontname="Helvetica", fontsize=9, color="#5b6b7b"];
+
+  src [label="Fuente UCI\n.xls · 30.000 clientes", fillcolor="#f3f4f6"];
+  subgraph cluster_datos { label="1 · Datos (PSet 2) — Snowflake PSET2_MORA"; style="rounded,filled"; fillcolor="#eef7fb"; color="#7dbad6";
+    ing [label="Kestra ingesta.yml\nretry · backfill idempotente", fillcolor="#e0ecff"];
+    capas [label="RAW → BRONZE → SILVER → GOLD\n(dbt + tests; estrella: 2 hechos, 3 dim.)"];
+    obt [label="OBT (Spark)\n1 fila por cliente\njoins validados"];
+  }
+  subgraph cluster_modelo { label="2 · Modelo (PSet 3) — MLflow"; style="rounded,filled"; fillcolor="#f4ecfb"; color="#b79ad6";
+    exp [label="Notebooks 01–05\nEDA · features · CV · tuning"];
+    reg [label="Model Registry\n@champion  @challenger  @anterior"];
+  }
+  subgraph cluster_serv { label="3 · Servicio y operación (PSet 4)"; style="rounded,filled"; fillcolor="#fffbea"; color="#e3c766";
+    api [label="API FastAPI en Docker\n/salud /modelo /predecir\nPydantic · umbral · respaldo"];
+    pl [label="Kestra produccion_lotes.yml\nlote mensual → API → Snowflake", fillcolor="#e0ecff"];
+    tabs [label="PREDICCIONES · DESEMPENO\nMONITOREO · ALERTAS"];
+    mo [label="Kestra monitoreo.yml\nsistema · modelo · PSI · AUC · ahorro", fillcolor="#e0ecff"];
+    re [label="Kestra reentrenamiento.yml\nentrenar → PAUSA (persona) → decidir", fillcolor="#e0ecff"];
+    tab [label="Tablero Streamlit"];
+  }
+  cob [label="Cobranza\nlista mensual priorizada\n(el asesor decide la oferta)", fillcolor="#f3f4f6"];
+  gh [label="GitHub Actions\nci: pytest + build\ncd: imagen :sha → GHCR", fillcolor="#eaeaea"];
+
+  src -> ing -> capas -> obt;
+  obt -> exp [label="snapshot + hash"]; exp -> reg;
+  obt -> pl [label="hold-out → 10 lotes"];
+  pl -> api [label="POST /predecir"]; reg -> api [label="carga por alias\n(sin reconstruir)"];
+  api -> tabs [label="registro con versión\ny latencia"]; tabs -> mo; mo -> re [label="alerta de desempeño\no calendario"];
+  re -> reg [label="nueva versión\n(si se aprueba)", constraint=false];
+  tabs -> tab; api -> cob; gh -> api [style=dashed, label="imagen"];
+  { rank=same; src; gh; }
+}

@@ -1,0 +1,3 @@
+,modelo,run_id,version,test_roc_auc,test_ahorro_NT$
+champion,lightgbm,3933132ad8a945c4bf1249f8dee5b655,1,0.782859122238723,9257178.553494066
+challenger,hist_gradient_boosting,7f0f057610bb4d82a387600c41629a41,2,0.7832592950475812,9185228.345074402

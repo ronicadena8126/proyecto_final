@@ -1,0 +1,1 @@
+Copia del champion para CI: se genera con python -m src.exportar_fixture (ver README, paso 3).

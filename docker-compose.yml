@@ -1,0 +1,228 @@
+# Proyecto final "Anticipar la mora": toda la infraestructura con un solo comando.
+#
+#   docker compose up -d --build
+#
+#   Kestra   http://localhost:8080   orquesta ingesta, simulación, monitoreo y reentrenamiento
+#   Spark    http://localhost:8082   master + worker (OBT del PSet 2)
+#   MLflow   http://localhost:5001   tracking + Model Registry (en macOS el 5000 lo usa AirPlay)
+#   API      http://localhost:8000   FastAPI (docs en /docs)
+#   Tablero  http://localhost:8501   Streamlit: sistema, modelo, deriva, alertas y reentrenamientos
+#
+# Snowflake es el almacén (SaaS). Las credenciales viven en .env / .env_encoded, que no se versionan.
+# Los servicios jobs, ingesta y transform solo construyen las imágenes que Kestra ejecuta con su
+# Docker task runner (pullPolicy: NEVER); arrancan, imprimen un mensaje y terminan.
+name: proyecto_final
+
+x-snowflake: &snowflake
+  SNOWFLAKE_ACCOUNT: ${SNOWFLAKE_ACCOUNT:-}
+  SNOWFLAKE_USER: ${SNOWFLAKE_USER:-}
+  SNOWFLAKE_ROLE: ${SNOWFLAKE_ROLE:-}
+  SNOWFLAKE_WAREHOUSE: ${SNOWFLAKE_WAREHOUSE:-}
+  SNOWFLAKE_DATABASE: ${SNOWFLAKE_DATABASE:-}
+  SNOWFLAKE_PRIVATE_KEY_PATH: /run/secrets/snowflake_key.p8
+
+services:
+  # ------------------------------------------------------------------ Kestra (PSet 2)
+  kestra-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: kestra
+      POSTGRES_USER: kestra
+      POSTGRES_PASSWORD: ${KESTRA_DB_PASSWORD:-k3str4}
+    volumes:
+      - kestra-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d kestra -U kestra"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [red]
+
+  kestra:
+    image: ${KESTRA_IMAGE:-kestra/kestra:v2.0.7}
+    command: server standalone
+    user: "root"                      # necesario para usar el Docker task runner
+    env_file:
+      - .env_encoded                  # SECRET_* en base64 (scripts/encode_secrets.sh)
+    environment:
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://kestra-db:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: ${KESTRA_DB_PASSWORD:-k3str4}
+        kestra:
+          server:
+            basic-auth:
+              username: ${KESTRA_USER:-admin@kestra.io}
+              password: ${KESTRA_PASSWORD:-Admin1234}
+          repository:
+            type: postgres
+          queue:
+            type: postgres
+          storage:
+            type: local
+            local:
+              base-path: "/app/storage"
+          tasks:
+            tmp-dir:
+              path: /tmp/kestra-wd/tmp
+          url: http://localhost:8080/
+    ports:
+      - "8080:8080"
+    volumes:
+      - kestra-data:/app/storage
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/kestra-wd:/tmp/kestra-wd
+    depends_on:
+      kestra-db:
+        condition: service_healthy
+    networks: [red]
+
+  # ------------------------------------------------------------------ Spark (PSet 2)
+  spark-master:
+    image: ${SPARK_IMAGE:-apache/spark:3.4.1}
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.master.Master
+    environment:
+      SPARK_NO_DAEMONIZE: "true"
+    ports:
+      - "8082:8080"
+      - "7077:7077"
+    volumes:
+      - ./spark:/opt/spark-apps
+    networks: [red]
+
+  spark-worker:
+    image: ${SPARK_IMAGE:-apache/spark:3.4.1}
+    command: /opt/spark/bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      SPARK_WORKER_CORES: "2"
+      SPARK_WORKER_MEMORY: 2g
+    depends_on: [spark-master]
+    volumes:
+      - ./spark:/opt/spark-apps
+    networks: [red]
+
+  # ------------------------------------------------------------------ MLflow (PSet 3)
+  mlflow-db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: mlflow
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: ${MLFLOW_DB_PASSWORD:-mlflow}
+    volumes:
+      - mlflow-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow -d mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [red]
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: docker/mlflow.Dockerfile
+    image: proyecto-final-mlflow:2.17.2
+    command: >
+      mlflow server
+      --host 0.0.0.0 --port 5000
+      --backend-store-uri postgresql://mlflow:${MLFLOW_DB_PASSWORD:-mlflow}@mlflow-db:5432/mlflow
+      --artifacts-destination /mlartifacts
+      --serve-artifacts
+    ports:
+      - "5001:5000"
+    volumes:
+      - mlflow-artifacts:/mlartifacts
+    depends_on:
+      mlflow-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:5000/health')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    networks: [red]
+
+  # ------------------------------------------------------------------ API (PSet 4)
+  # Imagen publicada por .github/workflows/cd.yml en GitHub Container Registry con el hash del commit.
+  #   docker compose pull api        (usa API_TAG del .env; "latest" = último merge a main)
+  # Si la imagen no está disponible, compose la construye localmente con api/Dockerfile.
+  api:
+    image: ghcr.io/${GHCR_OWNER:-ronicadena8126}/proyecto_final-api:${API_TAG:-latest}
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODELO_URI: models:/anticipar-mora-modelo@champion
+      RECARGA_SEGUNDOS: ${RECARGA_SEGUNDOS:-30}
+      MODO_RESPALDO: ${MODO_RESPALDO:-0}
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?Define ADMIN_TOKEN en .env}
+      REGISTRO_DB: /app/registro/registro_api.db
+    ports:
+      - "8000:8000"
+    volumes:
+      - api-registro:/app/registro
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    networks: [red]
+
+  # ------------------------------------------------------------------ Tablero (PSet 4)
+  tablero:
+    build:
+      context: .
+      dockerfile: tablero/Dockerfile
+    image: proyecto-final-tablero:1.0
+    environment:
+      <<: *snowflake
+      ALMACEN: ${ALMACEN:-snowflake}
+      API_URL: http://api:8000
+    volumes:
+      - ${SNOWFLAKE_PRIVATE_KEY_PATH:?Define SNOWFLAKE_PRIVATE_KEY_PATH en .env}:/run/secrets/snowflake_key.p8:ro
+    ports:
+      - "8501:8501"
+    networks: [red]
+
+  # ------------------------------------------------------------------ imágenes que corre Kestra
+  jobs:
+    build:
+      context: .
+      dockerfile: docker/jobs.Dockerfile
+    image: proyecto-final-jobs:1.0
+    restart: "no"
+    networks: [red]
+
+  ingesta:
+    build:
+      context: .
+      dockerfile: docker/ingesta.Dockerfile
+    image: proyecto-final-ingesta:1.0
+    command: ["python", "-c", "print('imagen de ingesta lista')"]
+    restart: "no"
+    networks: [red]
+
+  transform:
+    build:
+      context: .
+      dockerfile: docker/transform.Dockerfile
+    image: proyecto-final-transform:1.0
+    command: ["python", "-c", "print('imagen de transformación lista')"]
+    restart: "no"
+    networks: [red]
+
+volumes:
+  kestra-db:
+  kestra-data:
+  api-registro:
+  # Los mismos volúmenes del PSet 3: el proyecto final conserva sus corridas y el Model Registry.
+  mlflow-db:
+    name: pset3_mlflow-db
+  mlflow-artifacts:
+    name: pset3_mlflow-artifacts
+
+networks:
+  red:
+    name: proyecto_final_net

@@ -1,0 +1,111 @@
+id: reentrenamiento
+namespace: usfq.proyecto_final
+description: |
+  Reentrenamiento con aprobación humana (sección 7.2):
+    1. entrenar  - ventana: histórico completo con más peso en los lotes recientes (solo lotes con
+                   target); misma preparación (src/pipeline.py) e hiperparámetros del champion, sin
+                   tuning; corrida en MLflow con fase=reentrenamiento y el motivo; nueva versión con
+                   alias @challenger; compara champion y challenger en el lote etiquetado más
+                   reciente, que ninguno vio, y aplica la regla de promoción de la sección 4.
+    2. aprobacion - pausa: una persona aprueba o rechaza (Resume en la UI de Kestra).
+    3. decidir   - si aprueba, @champion pasa a la nueva versión (la API la toma sola, sin
+                   reconstruir la imagen); si rechaza, el champion queda intacto y se registra el motivo.
+  El código se despliega solo (cd.yml); el modelo NO: cambia la decisión de a quién llama cobranza,
+  y la regla de promoción usa supuestos de negocio que una persona debe validar.
+labels:
+  project: anticipar-mora
+  layer: reentrenamiento
+concurrency:
+  limit: 1
+  behavior: QUEUE
+
+inputs:
+  - id: lote
+    type: INT
+    defaults: 0
+    description: Lote en el que se disparó (0 = el lote de producción más reciente)
+  - id: motivo
+    type: STRING
+    defaults: manual
+    description: desempeno | calendario | manual
+
+
+tasks:
+  - id: entrenar
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: proyecto-final-jobs:1.0
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: proyecto_final_net
+    env:
+      ALMACEN: snowflake
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+      SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+      SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+      SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+      SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+      SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+    commands:
+      - python -m src.reentrenar entrenar --lote {{ inputs.lote }} --motivo {{ inputs.motivo }}
+    timeout: PT30M
+
+  - id: comparacion
+    type: io.kestra.plugin.core.log.Log
+    level: WARN
+    message: |
+      Challenger v{{ outputs.entrenar.vars.version }} (run {{ outputs.entrenar.vars.run_id }}) vs champion v{{ outputs.entrenar.vars.champion_version }}.
+      {{ outputs.entrenar.vars.resumen }}
+      Recomendación según la regla: {{ outputs.entrenar.vars.cumple_regla ? 'APROBAR' : 'RECHAZAR' }}.
+      Para decidir: Executions > esta ejecución > Resume (aprobar = true/false y un comentario).
+
+  - id: aprobacion
+    type: io.kestra.plugin.core.flow.Pause
+    onResume:
+      - id: aprobar
+        type: BOOLEAN
+        description: "¿Promover el challenger a champion?"
+        defaults: false
+      - id: comentario
+        type: STRING
+        description: Motivo de la decisión (queda en MLflow y en PRODUCCION.REENTRENAMIENTOS)
+        defaults: "sin comentario"
+
+  - id: decidir
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: proyecto-final-jobs:1.0
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: proyecto_final_net
+    env:
+      ALMACEN: snowflake
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      API_URL: http://api:8000
+      ADMIN_TOKEN: "{{ secret('ADMIN_TOKEN') }}"
+      COMENTARIO: "{{ outputs.aprobacion.onResume.comentario }}"
+      SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+      SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+      SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+      SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+      SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+      SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+    commands:
+      - python -m src.reentrenar decidir --lote {{ inputs.lote }} --version {{ outputs.entrenar.vars.version }} --aprobar {{ outputs.aprobacion.onResume.aprobar }} --comentario "$COMENTARIO" --por kestra-ui
+
+  - id: resultado
+    type: io.kestra.plugin.core.log.Log
+    message: "Decisión: {{ outputs.decidir.vars.decision }} (challenger v{{ outputs.entrenar.vars.version }})"
+
+triggers:
+  # Reentrenamiento por calendario en operación real: día 3 de cada mes, 08:00 (después de la
+  # ingesta del día 2 y de la puntuación del mes). En la simulación el calendario se cuenta en
+  # lotes (cada 5 lotes sin reentrenar) y lo dispara monitoreo.yml.
+  - id: calendario
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 8 3 * *"
+    timezone: America/Guayaquil
+    inputs:
+      lote: 0
+      motivo: calendario

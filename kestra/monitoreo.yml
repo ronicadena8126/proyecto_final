@@ -1,0 +1,77 @@
+id: monitoreo
+namespace: usfq.proyecto_final
+description: |
+  Se ejecuta después de cada lote (subflujo de produccion_lotes). Calcula las métricas de sistema,
+  modelo, datos y deriva del lote y el desempeño del lote anterior (cuyo target acaba de llegar),
+  las guarda en PRODUCCION.MONITOREO, registra las alertas en PRODUCCION.ALERTAS y las publica en el
+  log de Kestra (nivel ERROR). Si el disparador de la sección 7.1 se cumple, lanza el reentrenamiento
+  y espera su decisión (aprobación humana) antes de devolver el control al lote siguiente.
+labels:
+  project: anticipar-mora
+  layer: monitoreo
+
+inputs:
+  - id: lote
+    type: INT
+    description: Lote recién puntuado
+
+
+tasks:
+  - id: calcular
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: proyecto-final-jobs:1.0
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+      networkMode: proyecto_final_net
+    env:
+      ALMACEN: snowflake
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+      SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+      SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+      SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+      SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+      SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+    commands:
+      - python -m monitoreo.alertas --lote {{ inputs.lote }}
+    timeout: PT20M
+    retry:
+      type: constant
+      interval: PT30S
+      maxAttempts: 2
+
+  - id: publicar_alertas
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ outputs.calcular.vars.n_alertas > 0 }}"
+    then:
+      - id: alerta
+        type: io.kestra.plugin.core.log.Log
+        level: ERROR
+        message: "ALERTAS lote {{ inputs.lote }} ({{ outputs.calcular.vars.n_alertas }}, {{ outputs.calcular.vars.n_alertas_altas }} altas): {{ outputs.calcular.vars.alertas }}"
+    else:
+      - id: sin_alertas
+        type: io.kestra.plugin.core.log.Log
+        message: "Lote {{ inputs.lote }}: sin alertas"
+
+  - id: disparador
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ outputs.calcular.vars.reentrenar }}"
+    then:
+      - id: aviso_reentrenamiento
+        type: io.kestra.plugin.core.log.Log
+        level: WARN
+        message: "Reentrenamiento por {{ outputs.calcular.vars.motivo }}: {{ outputs.calcular.vars.explicacion }}"
+      - id: reentrenar
+        type: io.kestra.plugin.core.flow.Subflow
+        namespace: usfq.proyecto_final
+        flowId: reentrenamiento
+        wait: true
+        transmitFailed: true
+        inputs:
+          lote: "{{ inputs.lote }}"
+          motivo: "{{ outputs.calcular.vars.motivo }}"
+    else:
+      - id: sin_reentrenamiento
+        type: io.kestra.plugin.core.log.Log
+        message: "Sin reentrenamiento: {{ outputs.calcular.vars.explicacion }}"

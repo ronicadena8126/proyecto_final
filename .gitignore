@@ -1,0 +1,26 @@
+# Secretos: nunca al repositorio
+.env
+.env_encoded
+*.p8
+*.pem
+# Datos y artefactos locales
+data/
+mlruns/
+mlartifacts/
+*.duckdb
+*.xls
+# dbt / Spark
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+dbt/.user.yml
+spark/gold_parquet/
+.ivy*/
+# Python / sistema
+__pycache__/
+.ipynb_checkpoints/
+.pytest_cache/
+.venv/
+.DS_Store
+docs/documento.html
+docs/presentacion.html

@@ -1,0 +1,129 @@
+id: ingesta
+namespace: usfq.proyecto_final
+description: |
+  Pipeline de datos del PSet 2 en un solo flujo: fuente UCI -> RAW -> (dbt) BRONZE -> SILVER -> GOLD
+  -> (Spark) OBT, todo en Snowflake (base PSET2_MORA).
+    1. ingesta: carga cada partición mensual de forma idempotente (DELETE de la partición + INSERT en un
+       COMMIT): repetir un mes, un retry o un backfill nunca duplica filas.
+    2. dbt_build: modelos Bronze/Silver/Gold + tests de calidad. Si un test falla, Spark no corre.
+    3. spark_obt: construye la OBT (1 fila por cliente) y valida los joins (conteos y unicidad).
+  Programado el día 2 de cada mes a las 06:00 (cierre del estado de cuenta del mes anterior).
+  Backfill: ejecutar a mano con meses = "2005-04 2005-05 2005-06 2005-07 2005-08 2005-09".
+labels:
+  project: anticipar-mora
+  layer: datos
+concurrency:
+  limit: 1
+  behavior: QUEUE
+
+inputs:
+  - id: meses
+    type: STRING
+    required: false
+    description: >
+      Meses del estado de cuenta a (re)cargar, separados por espacio (YYYY-MM). Vacío = el mes
+      anterior a la fecha programada. Backfill completo: 2005-04 2005-05 2005-06 2005-07 2005-08 2005-09
+
+tasks:
+  - id: ingesta
+    type: io.kestra.plugin.scripts.shell.Commands
+    description: Descarga la fuente una vez y carga cada partición mensual en RAW
+    containerImage: proyecto-final-ingesta:1.0
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+    env:
+      SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+      SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+      SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+      SNOWFLAKE_PRIVATE_KEY_PATH: /tmp/sf_key.p8
+      SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+      SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+      SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+      RAW_SCHEMA: RAW
+      KESTRA_EXECUTION_ID: "{{ execution.id }}"
+    commands:
+      - printf '%s\n' "$SNOWFLAKE_PRIVATE_KEY" > /tmp/sf_key.p8
+      - python -c "import requests;open('/tmp/uci.xls','wb').write(requests.get('https://raw.githubusercontent.com/jphall663/interpretable_machine_learning_with_python/master/default_of_credit_card_clients.xls',timeout=120).content)"
+      - for m in {{ inputs.meses ?? ((trigger.date ?? execution.startDate) | dateAdd(-1, 'MONTHS') | date('yyyy-MM')) }}; do python /app/ingest_uci.py --statement-month $m --target snowflake --local-file /tmp/uci.xls --execution-id {{ execution.id }} || exit 1; done
+    timeout: PT30M
+    # La fuente es un archivo estático que falla por caídas o throttling de minutos, y el warehouse
+    # suspendido tarda en reanudar: espera exponencial 30s -> 1m -> 2m -> 4m. La carga es idempotente.
+    retry:
+      type: exponential
+      interval: PT30S
+      maxInterval: PT10M
+      maxAttempts: 4
+      maxDuration: PT1H
+      warningOnRetry: true
+
+  - id: dbt_build
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: proyecto-final-transform:1.0
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+    namespaceFiles:
+      enabled: true
+      include:
+        - dbt/**
+    env:
+      SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+      SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+      SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+      SNOWFLAKE_PRIVATE_KEY_PATH: /tmp/sf_key.p8
+      SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+      SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+      SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+    commands:
+      - printf '%s\n' "$SNOWFLAKE_PRIVATE_KEY" > /tmp/sf_key.p8
+      - dbt build --project-dir dbt --profiles-dir dbt --target prod
+    timeout: PT30M
+    retry:
+      type: constant
+      interval: PT1M
+      maxAttempts: 2
+
+  - id: spark_obt
+    type: io.kestra.plugin.scripts.shell.Commands
+    containerImage: proyecto-final-transform:1.0
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+      pullPolicy: NEVER
+    namespaceFiles:
+      enabled: true
+      include:
+        - spark/build_obt.py
+        - kestra/scripts/ingest_uci.py
+    env:
+      SNOWFLAKE_ACCOUNT: "{{ secret('SNOWFLAKE_ACCOUNT') }}"
+      SNOWFLAKE_USER: "{{ secret('SNOWFLAKE_USER') }}"
+      SNOWFLAKE_PRIVATE_KEY: "{{ secret('SNOWFLAKE_PRIVATE_KEY') }}"
+      SNOWFLAKE_PRIVATE_KEY_PATH: /tmp/sf_key.p8
+      SNOWFLAKE_ROLE: "{{ secret('SNOWFLAKE_ROLE') }}"
+      SNOWFLAKE_WAREHOUSE: "{{ secret('SNOWFLAKE_WAREHOUSE') }}"
+      SNOWFLAKE_DATABASE: "{{ secret('SNOWFLAKE_DATABASE') }}"
+    commands:
+      - printf '%s\n' "$SNOWFLAKE_PRIVATE_KEY" > /tmp/sf_key.p8
+      - python spark/build_obt.py --mode snowflake-py
+    timeout: PT30M
+    retry:
+      type: constant
+      interval: PT2M
+      maxAttempts: 2
+
+  - id: resultado
+    type: io.kestra.plugin.core.log.Log
+    message: "OBT actualizada (execution {{ execution.id }}). Siguiente paso: monitoreo/simulación usa PSET2_MORA.OBT.OBT_CUSTOMER_DEFAULT."
+
+errors:
+  - id: log_falla
+    type: io.kestra.plugin.core.log.Log
+    level: ERROR
+    message: "FALLÓ la ingesta/transformación (execution {{ execution.id }}). Si falló dbt_build, la OBT no se reconstruyó sobre datos que no pasaron calidad."
+
+triggers:
+  - id: mensual
+    type: io.kestra.plugin.core.trigger.Schedule
+    cron: "0 6 2 * *"
+    timezone: America/Guayaquil
