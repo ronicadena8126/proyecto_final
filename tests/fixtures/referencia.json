@@ -1,0 +1,17 @@
+{
+  "nombre": "anticipar-mora-modelo",
+  "alias": "champion",
+  "version": 1,
+  "run_id": "3933132ad8a945c4bf1249f8dee5b655",
+  "auc_muestra_fija": 0.8182447553573441,
+  "metrica_mlflow": "auc_muestra_fija",
+  "tolerancia_auc": 0.001,
+  "cv_roc_auc_mean": 0.786958893748206,
+  "cv_roc_auc_std": 0.0043655060247653,
+  "corte_efectivo": 0.3405,
+  "umbral_decision": 0.05,
+  "datos_hash": "372bafd08cb627ae",
+  "datos_tabla_origen": "PSET2_MORA.OBT.OBT_CUSTOMER_DEFAULT",
+  "n_muestra": 600,
+  "tasa_impago_muestra": 0.22166666666666668
+}

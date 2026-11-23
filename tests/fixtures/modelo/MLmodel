@@ -1,0 +1,56 @@
+flavors:
+  python_function:
+    code: code
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.11.16
+  sklearn:
+    code: code
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.5.2
+mlflow_version: 2.17.2
+model_size_bytes: 666000
+model_uuid: 24033e85d8934851b84bbcd217e1524c
+signature:
+  inputs: '[{"type": "double", "name": "limit_bal", "required": true}, {"type": "double",
+    "name": "education_code", "required": true}, {"type": "double", "name": "is_education_imputed",
+    "required": true}, {"type": "double", "name": "is_marriage_imputed", "required":
+    true}, {"type": "double", "name": "age", "required": true}, {"type": "double",
+    "name": "is_inactive_6m", "required": true}, {"type": "double", "name": "months_with_credit_balance",
+    "required": true}, {"type": "double", "name": "pay_status_m1", "required": true},
+    {"type": "double", "name": "bill_amt_m1", "required": true}, {"type": "double",
+    "name": "pay_amt_m1", "required": true}, {"type": "double", "name": "util_m1",
+    "required": true}, {"type": "double", "name": "pay_status_m2", "required": true},
+    {"type": "double", "name": "bill_amt_m2", "required": true}, {"type": "double",
+    "name": "pay_amt_m2", "required": true}, {"type": "double", "name": "util_m2",
+    "required": true}, {"type": "double", "name": "pay_status_m3", "required": true},
+    {"type": "double", "name": "bill_amt_m3", "required": true}, {"type": "double",
+    "name": "pay_amt_m3", "required": true}, {"type": "double", "name": "util_m3",
+    "required": true}, {"type": "double", "name": "pay_status_m4", "required": true},
+    {"type": "double", "name": "bill_amt_m4", "required": true}, {"type": "double",
+    "name": "pay_amt_m4", "required": true}, {"type": "double", "name": "util_m4",
+    "required": true}, {"type": "double", "name": "pay_status_m5", "required": true},
+    {"type": "double", "name": "bill_amt_m5", "required": true}, {"type": "double",
+    "name": "pay_amt_m5", "required": true}, {"type": "double", "name": "util_m5",
+    "required": true}, {"type": "double", "name": "pay_status_m6", "required": true},
+    {"type": "double", "name": "bill_amt_m6", "required": true}, {"type": "double",
+    "name": "pay_amt_m6", "required": true}, {"type": "double", "name": "util_m6",
+    "required": true}, {"type": "double", "name": "max_delay_6m", "required": true},
+    {"type": "double", "name": "n_delinquent_months_6m", "required": true}, {"type":
+    "double", "name": "n_delinquent_months_3m", "required": true}, {"type": "double",
+    "name": "avg_utilization_6m", "required": true}, {"type": "double", "name": "max_utilization_6m",
+    "required": true}, {"type": "double", "name": "total_pay_amt_6m", "required":
+    true}, {"type": "double", "name": "avg_bill_amt_6m", "required": true}, {"type":
+    "double", "name": "n_overlimit_months_6m", "required": true}, {"type": "double",
+    "name": "n_credit_balance_months_6m", "required": true}, {"type": "double", "name":
+    "n_inconsistent_months_6m", "required": true}, {"type": "double", "name": "bill_trend_m1_vs_m6",
+    "required": true}, {"type": "double", "name": "is_delinquent_last_month", "required":
+    true}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float64", "shape": [-1]}}]'
+  params: null
+utc_time_created: '2026-11-23 05:02:44.953670'
