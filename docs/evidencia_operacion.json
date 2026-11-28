@@ -1,0 +1,127 @@
+[
+  {
+    "paso": "1. champion vigente",
+    "ts": "2026-11-28 00:44:08",
+    "modelo": {
+      "nombre": "anticipar-mora-modelo",
+      "version": 4,
+      "alias": "champion",
+      "run_id": "0fec341627484fc78f31105f51a21492",
+      "uri": "models:/anticipar-mora-modelo@champion",
+      "umbral": 0.3599,
+      "fuente_activa": "modelo",
+      "cargado_en": "2026-11-28T05:44:05.349+00:00",
+      "datos_hash": "372bafd08cb627ae",
+      "datos_tabla_origen": "PSET2_MORA.OBT.OBT_CUSTOMER_DEFAULT"
+    },
+    "prediccion": {
+      "probabilidad": 0.669047,
+      "decision": "contactar",
+      "version_modelo": 4,
+      "fuente": "modelo",
+      "respaldo": false,
+      "motivo_respaldo": null,
+      "id_prediccion": "2df2b222-c2de-4a02-baef-563e7a105019"
+    }
+  },
+  {
+    "paso": "2. rollback: alias -> v1 (sin rebuild)",
+    "ts": "2026-11-28 00:44:09",
+    "modelo": {
+      "nombre": "anticipar-mora-modelo",
+      "version": 1,
+      "alias": "champion",
+      "run_id": "3933132ad8a945c4bf1249f8dee5b655",
+      "uri": "models:/anticipar-mora-modelo@champion",
+      "umbral": 0.3405,
+      "fuente_activa": "modelo",
+      "cargado_en": "2026-11-28T05:44:09.186+00:00",
+      "datos_hash": "372bafd08cb627ae",
+      "datos_tabla_origen": "PSET2_MORA.OBT.OBT_CUSTOMER_DEFAULT"
+    },
+    "prediccion": {
+      "probabilidad": 0.691213,
+      "decision": "contactar",
+      "version_modelo": 1,
+      "fuente": "modelo",
+      "respaldo": false,
+      "motivo_respaldo": null,
+      "id_prediccion": "f77efce9-715c-463c-b2e6-555fbb4a4b76"
+    }
+  },
+  {
+    "paso": "3. restitución: alias -> v4",
+    "ts": "2026-11-28 00:44:09",
+    "modelo": {
+      "nombre": "anticipar-mora-modelo",
+      "version": 4,
+      "alias": "champion",
+      "run_id": "0fec341627484fc78f31105f51a21492",
+      "uri": "models:/anticipar-mora-modelo@champion",
+      "umbral": 0.3599,
+      "fuente_activa": "modelo",
+      "cargado_en": "2026-11-28T05:44:09.323+00:00",
+      "datos_hash": "372bafd08cb627ae",
+      "datos_tabla_origen": "PSET2_MORA.OBT.OBT_CUSTOMER_DEFAULT"
+    },
+    "prediccion": {
+      "probabilidad": 0.669047,
+      "decision": "contactar",
+      "version_modelo": 4,
+      "fuente": "modelo",
+      "respaldo": false,
+      "motivo_respaldo": null,
+      "id_prediccion": "8034dbbe-7474-46f1-a22c-a3c96d174b31"
+    }
+  },
+  {
+    "paso": "4. interruptor de respaldo ENCENDIDO",
+    "ts": "2026-11-28 00:44:09",
+    "modelo": {
+      "nombre": "anticipar-mora-modelo",
+      "version": 4,
+      "alias": "champion",
+      "run_id": "0fec341627484fc78f31105f51a21492",
+      "uri": "models:/anticipar-mora-modelo@champion",
+      "umbral": 0.5,
+      "fuente_activa": "regla_negocio",
+      "cargado_en": "2026-11-28T05:44:09.323+00:00",
+      "datos_hash": "372bafd08cb627ae",
+      "datos_tabla_origen": "PSET2_MORA.OBT.OBT_CUSTOMER_DEFAULT"
+    },
+    "prediccion": {
+      "probabilidad": 0.504,
+      "decision": "contactar",
+      "version_modelo": null,
+      "fuente": "regla_negocio",
+      "respaldo": true,
+      "motivo_respaldo": "prueba del interruptor de respaldo",
+      "id_prediccion": "8f37545f-cc23-4feb-8ec0-2b537306b0e7"
+    }
+  },
+  {
+    "paso": "5. interruptor de respaldo APAGADO",
+    "ts": "2026-11-28 00:44:09",
+    "modelo": {
+      "nombre": "anticipar-mora-modelo",
+      "version": 4,
+      "alias": "champion",
+      "run_id": "0fec341627484fc78f31105f51a21492",
+      "uri": "models:/anticipar-mora-modelo@champion",
+      "umbral": 0.3599,
+      "fuente_activa": "modelo",
+      "cargado_en": "2026-11-28T05:44:09.323+00:00",
+      "datos_hash": "372bafd08cb627ae",
+      "datos_tabla_origen": "PSET2_MORA.OBT.OBT_CUSTOMER_DEFAULT"
+    },
+    "prediccion": {
+      "probabilidad": 0.669047,
+      "decision": "contactar",
+      "version_modelo": 4,
+      "fuente": "modelo",
+      "respaldo": false,
+      "motivo_respaldo": null,
+      "id_prediccion": "2601676f-11c9-4c94-84f0-23dee86db9fe"
+    }
+  }
+]

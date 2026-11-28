@@ -1,0 +1,17 @@
+{
+  "prediccion_id": "d73d2a5a-f48e-4579-af6a-3fe99cfa4b38",
+  "ts": "2026-11-28T05:35:35.275+00:00",
+  "lote": 10,
+  "customer_id": 29945,
+  "probabilidad": 0.5783,
+  "decision": "contactar",
+  "version_modelo": 4,
+  "run_id": "0fec341627484fc78f31105f51a21492",
+  "run_coincide_con_registry": true,
+  "fase_de_la_corrida": "reentrenamiento",
+  "obt_tabla": "PSET2_MORA.OBT.OBT_CUSTOMER_DEFAULT",
+  "obt_hash": "372bafd08cb627ae",
+  "obt_fecha_corte": "2005-09-30",
+  "tablas_gold": "PSET2_MORA.GOLD.FCT_MONTHLY_STATEMENT, FCT_DEFAULT_OUTCOME, DIM_CUSTOMER, DIM_MONTH, DIM_PAYMENT_STATUS (dbt, PSet 2)",
+  "entradas_guardadas": 44
+}

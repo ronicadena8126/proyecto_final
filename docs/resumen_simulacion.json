@@ -1,0 +1,406 @@
+{
+  "n_lotes": 10,
+  "clientes_por_lote": 600,
+  "inicio_deriva": 6,
+  "predicciones": 5970,
+  "rechazos_4xx": 30,
+  "latencia_p50_ms": 7.116572750125,
+  "latencia_p95_ms_max": 11.955579149614993,
+  "tasa_5xx_max": 0.0,
+  "alertas": 12,
+  "alertas_altas": 8,
+  "primer_lote_alerta_deriva": 6,
+  "falsas_alarmas_deriva": 0,
+  "falsas_alarmas_detalle": [],
+  "psi_max_lotes_limpios": 0.0508709879916399,
+  "psi_max_lotes_deriva": 1.2206899404288598,
+  "piso_ruido_psi_p99_max": 0.045434959030999,
+  "reentrenamientos": [
+    {
+      "lote_disparo": 5,
+      "motivo": "calendario",
+      "lote_evaluacion": 4,
+      "version_champion_previo": 1,
+      "version_challenger": 3,
+      "auc_champion": 0.7732450996816886,
+      "auc_challenger": 0.7645501759088625,
+      "ahorro_champion": 887268.6425695781,
+      "ahorro_challenger": 844233.704270961,
+      "delta_ahorro": -43034.93829861714,
+      "sigma_cv_ahorro": 14442.160176681467,
+      "cumple_regla": 0,
+      "viol_comportamiento": 0,
+      "decision": "rechazado",
+      "comentario": "No supera al champion: diferencia de ahorro -43.035 menor que sigma_CV 14.442; sin cambio en los datos"
+    },
+    {
+      "lote_disparo": 8,
+      "motivo": "desempeno",
+      "lote_evaluacion": 7,
+      "version_champion_previo": 1,
+      "version_challenger": 4,
+      "auc_champion": 0.6856618074446074,
+      "auc_challenger": 0.7497151891376624,
+      "ahorro_champion": 1035479.2399710005,
+      "ahorro_challenger": 1064678.6863702273,
+      "delta_ahorro": 29199.446399226785,
+      "sigma_cv_ahorro": 14785.247928109122,
+      "cumple_regla": 1,
+      "viol_comportamiento": 76,
+      "decision": "aprobado",
+      "comentario": "Aprobado: cumple la regla (+29.199 vs sigma_CV 14.785; AUC 0,686 -> 0,750). Acepto las 76 violaciones de la prueba de atraso como efecto del nuevo régimen; queda en vigilancia y como siguiente paso restricciones de monotonía"
+    }
+  ],
+  "negocio": {
+    "modelo": 9602754.782,
+    "regla": 8825242.348,
+    "nada": 0.0,
+    "extra_vs_regla": 777512.4340000004,
+    "lotes_modelo_gana": 8,
+    "efecto_reentrenar": 525535.9289999999,
+    "lotes_post_reentreno": [
+      9,
+      10
+    ],
+    "por_lote": [
+      {
+        "lote_id": 1,
+        "version_modelo": 1.0,
+        "tasa_impago_real": 0.23,
+        "contactados": 114.0,
+        "moras_detectadas": 58.0,
+        "ahorro_modelo": 777622.49,
+        "ahorro_regla": 731952.36,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": 45670.13,
+        "ahorro_sin_reentrenar": NaN,
+        "efecto_reentrenar": NaN
+      },
+      {
+        "lote_id": 2,
+        "version_modelo": 1.0,
+        "tasa_impago_real": 0.23,
+        "contactados": 107.0,
+        "moras_detectadas": 64.0,
+        "ahorro_modelo": 867462.75,
+        "ahorro_regla": 943803.01,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": -76340.26,
+        "ahorro_sin_reentrenar": NaN,
+        "efecto_reentrenar": NaN
+      },
+      {
+        "lote_id": 3,
+        "version_modelo": 1.0,
+        "tasa_impago_real": 0.22,
+        "contactados": 119.0,
+        "moras_detectadas": 67.0,
+        "ahorro_modelo": 904632.88,
+        "ahorro_regla": 882242.84,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": 22390.04,
+        "ahorro_sin_reentrenar": NaN,
+        "efecto_reentrenar": NaN
+      },
+      {
+        "lote_id": 4,
+        "version_modelo": 1.0,
+        "tasa_impago_real": 0.21,
+        "contactados": 103.0,
+        "moras_detectadas": 58.0,
+        "ahorro_modelo": 783122.49,
+        "ahorro_regla": 788012.54,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": -4890.04,
+        "ahorro_sin_reentrenar": NaN,
+        "efecto_reentrenar": NaN
+      },
+      {
+        "lote_id": 5,
+        "version_modelo": 1.0,
+        "tasa_impago_real": 0.23,
+        "contactados": 119.0,
+        "moras_detectadas": 68.0,
+        "ahorro_modelo": 919022.92,
+        "ahorro_regla": 785012.54,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": 134010.39,
+        "ahorro_sin_reentrenar": NaN,
+        "efecto_reentrenar": NaN
+      },
+      {
+        "lote_id": 6,
+        "version_modelo": 1.0,
+        "tasa_impago_real": 0.38,
+        "contactados": 119.0,
+        "moras_detectadas": 70.0,
+        "ahorro_modelo": 947803.01,
+        "ahorro_regla": 920412.97,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": 27390.04,
+        "ahorro_sin_reentrenar": NaN,
+        "efecto_reentrenar": NaN
+      },
+      {
+        "lote_id": 7,
+        "version_modelo": 1.0,
+        "tasa_impago_real": 0.41,
+        "contactados": 119.0,
+        "moras_detectadas": 75.0,
+        "ahorro_modelo": 1019753.22,
+        "ahorro_regla": 972583.1,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": 47170.13,
+        "ahorro_sin_reentrenar": NaN,
+        "efecto_reentrenar": NaN
+      },
+      {
+        "lote_id": 8,
+        "version_modelo": 1.0,
+        "tasa_impago_real": 0.39,
+        "contactados": 119.0,
+        "moras_detectadas": 72.0,
+        "ahorro_modelo": 976583.1,
+        "ahorro_regla": 856462.75,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": 120120.34,
+        "ahorro_sin_reentrenar": NaN,
+        "efecto_reentrenar": NaN
+      },
+      {
+        "lote_id": 9,
+        "version_modelo": 4.0,
+        "tasa_impago_real": 0.37,
+        "contactados": 119.0,
+        "moras_detectadas": 91.0,
+        "ahorro_modelo": 1269074.7,
+        "ahorro_regla": 989779.71,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": 279295.0,
+        "ahorro_sin_reentrenar": 919022.92,
+        "efecto_reentrenar": 350051.78
+      },
+      {
+        "lote_id": 10,
+        "version_modelo": 4.0,
+        "tasa_impago_real": 0.4,
+        "contactados": 119.0,
+        "moras_detectadas": 82.0,
+        "ahorro_modelo": 1137677.2,
+        "ahorro_regla": 954980.54,
+        "ahorro_nada": 0.0,
+        "modelo_menos_regla": 182696.66,
+        "ahorro_sin_reentrenar": 962193.05,
+        "efecto_reentrenar": 175484.15
+      }
+    ]
+  },
+  "diagnostico": [
+    {
+      "lote_id": 1,
+      "diagnostico": "estable",
+      "psi_max_del_lote": 0.029,
+      "auc": 0.747,
+      "umbral": 0.743,
+      "version": 1.0,
+      "accion": "Ninguna"
+    },
+    {
+      "lote_id": 2,
+      "diagnostico": "estable",
+      "psi_max_del_lote": 0.039,
+      "auc": 0.812,
+      "umbral": 0.747,
+      "version": 1.0,
+      "accion": "Ninguna"
+    },
+    {
+      "lote_id": 3,
+      "diagnostico": "estable",
+      "psi_max_del_lote": 0.051,
+      "auc": 0.778,
+      "umbral": 0.737,
+      "version": 1.0,
+      "accion": "Ninguna"
+    },
+    {
+      "lote_id": 4,
+      "diagnostico": "estable",
+      "psi_max_del_lote": 0.028,
+      "auc": 0.773,
+      "umbral": 0.739,
+      "version": 1.0,
+      "accion": "Ninguna"
+    },
+    {
+      "lote_id": 5,
+      "diagnostico": "estable",
+      "psi_max_del_lote": 0.047,
+      "auc": 0.764,
+      "umbral": 0.74,
+      "version": 1.0,
+      "accion": "Ninguna"
+    },
+    {
+      "lote_id": 6,
+      "diagnostico": "deriva_datos_con_impacto",
+      "psi_max_del_lote": 0.902,
+      "auc": 0.708,
+      "umbral": 0.746,
+      "version": 1.0,
+      "accion": "Reentrenar con los lotes recientes (con aprobación) y revisar la fuente"
+    },
+    {
+      "lote_id": 7,
+      "diagnostico": "deriva_datos_con_impacto",
+      "psi_max_del_lote": 1.099,
+      "auc": 0.686,
+      "umbral": 0.74,
+      "version": 1.0,
+      "accion": "Reentrenar con los lotes recientes (con aprobación) y revisar la fuente"
+    },
+    {
+      "lote_id": 8,
+      "diagnostico": "deriva_datos_con_impacto",
+      "psi_max_del_lote": 0.921,
+      "auc": 0.676,
+      "umbral": 0.742,
+      "version": 1.0,
+      "accion": "Reentrenar con los lotes recientes (con aprobación) y revisar la fuente"
+    },
+    {
+      "lote_id": 9,
+      "diagnostico": "deriva_datos_sin_impacto",
+      "psi_max_del_lote": 0.932,
+      "auc": 0.815,
+      "umbral": 0.751,
+      "version": 4.0,
+      "accion": "No reentrenar; actualizar la referencia de entrenamiento y vigilar"
+    },
+    {
+      "lote_id": 10,
+      "diagnostico": "deriva_datos_sin_impacto",
+      "psi_max_del_lote": 1.221,
+      "auc": 0.791,
+      "umbral": 0.748,
+      "version": 4.0,
+      "accion": "No reentrenar; actualizar la referencia de entrenamiento y vigilar"
+    }
+  ],
+  "subgrupos_brecha_recall": {
+    "grupo_edad": 0.065,
+    "educacion": 0.368,
+    "cupo": 0.22799999999999998
+  },
+  "subgrupos_brecha_auc": {
+    "grupo_edad": 0.02400000000000002,
+    "educacion": 0.05700000000000005,
+    "cupo": 0.08200000000000007
+  },
+  "costo_errores": [
+    {
+      "error": "Falso positivo",
+      "que_pasa": "se llama a un cliente que sí iba a pagar",
+      "casos": 593,
+      "costo_estimado_NT": 296500.0,
+      "quien_lo_asume": "Área de cobranza (tiempo del asesor) y el cliente (una llamada de cobranza que no necesitaba)"
+    },
+    {
+      "error": "Falso negativo",
+      "que_pasa": "no se llama a un cliente que no paga",
+      "casos": 953,
+      "costo_estimado_NT": 13713710.979,
+      "quien_lo_asume": "Banco (provisión y pérdida de la deuda; riesgo de crédito) y el cliente (cae en mora: intereses y buró)"
+    }
+  ],
+  "criterios_retirada": [
+    {
+      "condicion": "Ahorro del modelo < ahorro de la regla 2 lotes seguidos, AUN DESPUÉS de reentrenar",
+      "metrica": "ahorro por lote",
+      "umbral": "2 lotes",
+      "respuesta": "Interruptor de respaldo: la API sirve la regla; revisión del modelo",
+      "estado_simulacion": "no se cumple"
+    },
+    {
+      "condicion": "AUC < 0,70 en 2 lotes seguidos después de un reentrenamiento aprobado",
+      "metrica": "AUC del lote",
+      "umbral": "0,70 (≈ regla de negocio)",
+      "respuesta": "Retirar el modelo: respaldo + nuevo ciclo de features",
+      "estado_simulacion": "no se cumple"
+    },
+    {
+      "condicion": "Errores 5xx > 5% o el modelo no carga",
+      "metrica": "tasa_5xx / /salud",
+      "umbral": "5% en 1 lote",
+      "respuesta": "Respaldo automático (la API ya lo hace si el modelo no carga) y escalar a plataforma",
+      "estado_simulacion": "no se cumple"
+    },
+    {
+      "condicion": "Brecha de recall entre grupos de edad o de cupo > 0,15",
+      "metrica": "recall por subgrupo",
+      "umbral": "0,15",
+      "respuesta": "Ajustar: corte por segmento o revisión de features; la decisión vuelve a ser 100% humana en ese segmento",
+      "estado_simulacion": "SE CUMPLE"
+    },
+    {
+      "condicion": "Tasa de contacto > 25% (más que la capacidad) 2 lotes seguidos",
+      "metrica": "tasa_contactar",
+      "umbral": "25%",
+      "respuesta": "Ajustar: recalibrar el corte con el último lote (la lista se recorta al top 20%)",
+      "estado_simulacion": "SE CUMPLE"
+    }
+  ],
+  "traza": {
+    "prediccion_id": "d73d2a5a-f48e-4579-af6a-3fe99cfa4b38",
+    "ts": "2026-11-28T05:35:35.275+00:00",
+    "lote": 10,
+    "customer_id": 29945,
+    "probabilidad": 0.5783,
+    "decision": "contactar",
+    "version_modelo": 4,
+    "run_id": "0fec341627484fc78f31105f51a21492",
+    "run_coincide_con_registry": true,
+    "fase_de_la_corrida": "reentrenamiento",
+    "obt_tabla": "PSET2_MORA.OBT.OBT_CUSTOMER_DEFAULT",
+    "obt_hash": "372bafd08cb627ae",
+    "obt_fecha_corte": "2005-09-30",
+    "tablas_gold": "PSET2_MORA.GOLD.FCT_MONTHLY_STATEMENT, FCT_DEFAULT_OUTCOME, DIM_CUSTOMER, DIM_MONTH, DIM_PAYMENT_STATUS (dbt, PSet 2)",
+    "entradas_guardadas": 44
+  },
+  "auc_por_lote": {
+    "1": 0.7474,
+    "2": 0.8124,
+    "3": 0.7779,
+    "4": 0.7732,
+    "5": 0.7643,
+    "6": 0.7083,
+    "7": 0.6857,
+    "8": 0.6756,
+    "9": 0.8145,
+    "10": 0.7912
+  },
+  "umbral_auc_por_lote": {
+    "1": 0.7429,
+    "2": 0.7469,
+    "3": 0.7371,
+    "4": 0.7391,
+    "5": 0.7398,
+    "6": 0.7459,
+    "7": 0.7401,
+    "8": 0.7419,
+    "9": 0.7512,
+    "10": 0.7481
+  },
+  "tasa_contactar_por_lote": {
+    "1": 0.191,
+    "2": 0.1792,
+    "3": 0.2077,
+    "4": 0.1725,
+    "5": 0.2077,
+    "6": 0.2228,
+    "7": 0.2077,
+    "8": 0.2111,
+    "9": 0.4389,
+    "10": 0.4338
+  }
+}
